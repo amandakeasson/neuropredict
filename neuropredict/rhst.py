@@ -18,22 +18,21 @@ import config_neuropredict as cfg
 from pyradigm import MLDataset
 
 
-def eval_optimized_clsfr_on_testset(train_fs, test_fs, num_features, label_order_in_CM):
+def eval_optimized_clsfr_on_testset(train_fs, test_fs, nfeatures, label_order_in_CM):
     "Method to optimize the classifier on the training set and return predictions on test set. "
     
-    print(num_features)
-    if num_features in 'tenpc':
+    if nfeatures == 'tenpc':
         MAX_DIM_FOR_TRAINING = max_dimensionality_to_avoid_curseofdimensionality(train_fs.num_samples, train_fs.num_features)
-    elif num_features in 'sqrtn':
+    elif nfeatures == 'sqrt_n':
         MAX_DIM_FOR_TRAINING = sqrt_n_samples(train_fs.num_samples, train_fs.num_features)
     else:
-        MAX_DIM_FOR_TRAINING = num_features
+        MAX_DIM_FOR_TRAINING = nfeatures
         
         if MAX_DIM_FOR_TRAINING < 1:
-            raise Exception("num_features must be 1 or greater")
+            raise Exception("nfeatures must be 1 or greater")
         
         if MAX_DIM_FOR_TRAINING > train_fs.num_features:
-            raise Exception("num_features cannot be greater than the total number of features")
+            raise Exception("nfeatures cannot be greater than the total number of features")
     
     range_min_leafsize   = range(1, cfg.MAX_MIN_LEAFSIZE, cfg.LEAF_SIZE_STEP)
     range_num_predictors = range(1, MAX_DIM_FOR_TRAINING, cfg.NUM_PREDICTORS_STEP)
@@ -244,7 +243,7 @@ def load_results(results_file_path):
 
 def run(dataset_path_file, method_names, out_results_dir,
         train_perc = 0.8, num_repetitions = 200,
-        positive_class = None, num_features = 'tenpc'):
+        positive_class = None, nfeatures = 'tenpc'):
     """
 
     Parameters
@@ -265,7 +264,7 @@ def run(dataset_path_file, method_names, out_results_dir,
         Number of repetitions of cross-validation estimation. Default: 200.
     positive_class : str
         Name of the class to be treated as positive in calculation of AUC
-    num_features: str or int
+    nfeatures: str or int
         The number of features to select
 
     Returns
@@ -445,7 +444,7 @@ def run(dataset_path_file, method_names, out_results_dir,
                 pred_labels_per_rep_fs[rep, dd, :], true_test_labels, \
                 confmat, misclsfd_ids_this_run, feature_importances_rf[dd][rep,:], \
                 best_min_leaf_size[rep, dd], best_num_predictors[rep, dd] = \
-                eval_optimized_clsfr_on_testset(train_fs, test_fs, num_features, label_order_in_CM=label_set)
+                eval_optimized_clsfr_on_testset(train_fs, test_fs, nfeatures, label_order_in_CM=label_set)
 
             accuracy_balanced[rep,dd] = balanced_accuracy(confmat)
             confusion_matrix[:,:,rep,dd] = confmat
@@ -521,7 +520,7 @@ if __name__ == '__main__':
 #         pred_prob_per_class[dd, :, :], pred_labels_per_rep_fs[dd, :], \
 #         confmat, misclsfd_ids_this_run, feature_importances_rf[dd], \
 #         best_min_leaf_size[dd], best_num_predictors[dd] = \
-#             eval_optimized_clsfr_on_testset(train_fs, test_fs, num_features)
+#             eval_optimized_clsfr_on_testset(train_fs, test_fs, nfeatures)
 #
 #         accuracy_balanced[dd] = balanced_accuracy(confmat)
 #         confusion_matrix[:, :, dd] = confmat

@@ -123,7 +123,7 @@ def parse_args():
                              "ideally just alphanumeric characters separated by underscores. "
                              "Default: all - using all the available classes in a all-vs-all multi-class setting.")
 
-    parser.add_argument("--num_features", action="store", dest="num_features",
+    parser.add_argument("--nfeatures", action="store", dest="nfeatures",
 			default='tenpc',
 			help="This option allows the user to define the number of features to be selected. If this option is not defined by the user, "
 			     "the number of features that are selected will be equal to 10% of the size of the smallest group.")
@@ -181,16 +181,17 @@ def parse_args():
         except:
             raise
 
-    if not_unspecified(options.num_features):
-        num_features = str(options.num_features)
-        num_features_str_options = ['sqrt_n', 'tenpc']
-        if num_features not in num_features_str_options:
+    if not_unspecified(options.nfeatures):
+        nfeatures = str(options.nfeatures)
+        nfeatures_str_options = ['sqrt_n', 'tenpc']
+        if nfeatures not in nfeatures_str_options:
             try:
-                num_features = int(num_features)
+                nfeatures = int(nfeatures)
             except ValueError:
-                print("num_features must be set to 'tenpc', 'sqrt_n', or an integer number of features")
+                print("nfeatures must be set to 'tenpc', 'sqrt_n', or an integer number of features")
+                sys.exit()
     else:
-        num_features = 'tenpc'
+        nfeatures = 'tenpc'
 
     train_perc = np.float32(options.train_perc)
     assert (train_perc >= 0.01 and train_perc <= 0.99), \
@@ -218,7 +219,7 @@ def parse_args():
            user_feature_paths, user_feature_type, \
            fsdir, \
            train_perc, num_rep_cv, \
-           options.positiveclass, subgroups, num_features
+           options.positiveclass, subgroups, nfeatures
 
 
 def get_metadata(path):
@@ -693,7 +694,7 @@ def run():
     # TODO design an API interface for advanced access as an importable package
 
     subjects, classes, outdir, user_feature_paths, user_feature_type, \
-        fsdir, train_perc, num_rep_cv, positiveclass, subgroups, num_features = parse_args()
+        fsdir, train_perc, num_rep_cv, positiveclass, subgroups, nfeatures = parse_args()
 
     positiveclass = validate_class_set(classes, positiveclass)
 
@@ -705,7 +706,7 @@ def run():
 
     results_file_path = rhst.run(dataset_paths_file, method_names, outdir,
                                  train_perc=train_perc, num_repetitions=num_rep_cv,
-                                 positive_class= positiveclass, num_features = num_features)
+                                 positive_class= positiveclass, nfeatures = nfeatures)
 
     visualize_results(results_file_path, outdir, method_names)
 
