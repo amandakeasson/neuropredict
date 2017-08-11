@@ -18,11 +18,23 @@ import config_neuropredict as cfg
 from pyradigm import MLDataset
 
 
-def eval_optimized_clsfr_on_testset(train_fs, test_fs, label_order_in_CM):
+def eval_optimized_clsfr_on_testset(train_fs, test_fs, num_features, label_order_in_CM):
     "Method to optimize the classifier on the training set and return predictions on test set. "
-
-    MAX_DIM_FOR_TRAINING = max_dimensionality_to_avoid_curseofdimensionality(train_fs.num_samples, train_fs.num_features)
-
+    
+    print(num_features)
+    if num_features in 'tenpc':
+        MAX_DIM_FOR_TRAINING = max_dimensionality_to_avoid_curseofdimensionality(train_fs.num_samples, train_fs.num_features)
+    elif num_features in 'sqrtn':
+        MAX_DIM_FOR_TRAINING = sqrt_n_samples(train_fs.num_samples, train_fs.num_features)
+    else:
+        MAX_DIM_FOR_TRAINING = num_features
+        
+        if MAX_DIM_FOR_TRAINING < 1:
+            raise Exception("num_features must be 1 or greater")
+        
+        if MAX_DIM_FOR_TRAINING > train_fs.num_features:
+            raise Exception("num_features cannot be greater than the total number of features")
+    
     range_min_leafsize   = range(1, cfg.MAX_MIN_LEAFSIZE, cfg.LEAF_SIZE_STEP)
     range_num_predictors = range(1, MAX_DIM_FOR_TRAINING, cfg.NUM_PREDICTORS_STEP)
 
@@ -100,6 +112,38 @@ def max_dimensionality_to_avoid_curseofdimensionality(num_samples, num_features,
         max_red_dim = 1
     else:
         max_red_dim = np.floor(num_samples * (2*perc_prob_error_allowed))
+
+    # to ensure we don't request more features than available
+    max_red_dim = np.int64( min(max_red_dim, num_features) )
+
+    return max_red_dim
+
+
+def sqrt_n_samples(num_samples, num_features, perc_prob_error_allowed = cfg.PERC_PROB_ERROR_ALLOWED):
+    """
+    Computes the largest dimensionality that can be used to train a predictive model
+        avoiding curse of dimensionality for a 5% probability of error.
+    Optional argument can specify the amount of error that the user wants to allow (deafult : 5% prob of error ).
+
+    Citation: Michael Fitzpatrick and Milan Sonka, Handbook of Medical Imaging, 2000
+    * added by AE, based on max_dimensionality_to_avoid_curseofdimensionality
+
+    Parameters
+    ----------
+    num_samples : int
+    num_features : int
+    perc_prob_error_allowed : float
+
+    Returns
+    -------
+    max_red_dim : int
+
+    """
+
+    if num_samples < 1/(2*perc_prob_error_allowed):
+        max_red_dim = 1
+    else:
+        max_red_dim = np.floor(np.sqrt(num_samples))
 
     # to ensure we don't request more features than available
     max_red_dim = np.int64( min(max_red_dim, num_features) )
@@ -200,7 +244,7 @@ def load_results(results_file_path):
 
 def run(dataset_path_file, method_names, out_results_dir,
         train_perc = 0.8, num_repetitions = 200,
-        positive_class = None):
+        positive_class = None, num_features = 'tenpc'):
     """
 
     Parameters
@@ -221,6 +265,8 @@ def run(dataset_path_file, method_names, out_results_dir,
         Number of repetitions of cross-validation estimation. Default: 200.
     positive_class : str
         Name of the class to be treated as positive in calculation of AUC
+    num_features: str or int
+        The number of features to select
 
     Returns
     -------
@@ -399,7 +445,7 @@ def run(dataset_path_file, method_names, out_results_dir,
                 pred_labels_per_rep_fs[rep, dd, :], true_test_labels, \
                 confmat, misclsfd_ids_this_run, feature_importances_rf[dd][rep,:], \
                 best_min_leaf_size[rep, dd], best_num_predictors[rep, dd] = \
-                eval_optimized_clsfr_on_testset(train_fs, test_fs, label_order_in_CM=label_set)
+                eval_optimized_clsfr_on_testset(train_fs, test_fs, num_features, label_order_in_CM=label_set)
 
             accuracy_balanced[rep,dd] = balanced_accuracy(confmat)
             confusion_matrix[:,:,rep,dd] = confmat
@@ -475,7 +521,7 @@ if __name__ == '__main__':
 #         pred_prob_per_class[dd, :, :], pred_labels_per_rep_fs[dd, :], \
 #         confmat, misclsfd_ids_this_run, feature_importances_rf[dd], \
 #         best_min_leaf_size[dd], best_num_predictors[dd] = \
-#             eval_optimized_clsfr_on_testset(train_fs, test_fs)
+#             eval_optimized_clsfr_on_testset(train_fs, test_fs, num_features)
 #
 #         accuracy_balanced[dd] = balanced_accuracy(confmat)
 #         confusion_matrix[:, :, dd] = confmat
